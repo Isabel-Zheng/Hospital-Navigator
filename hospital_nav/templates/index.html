@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Hospital Navigator</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Hospital Navigator</h1>
+
+    <div class="row">
+      <div class="panel left">
+        <label>Destination</label>
+        <div class="searchWrap">
+          <input id="search" placeholder="Search (e.g., X-ray, Lab)" />
+          <div id="results" class="results"></div>
+        </div>
+
+        <button id="routeBtn" disabled>Get Route</button>
+        <button id="returnBtn" disabled>Return to Start</button>
+        <button id="resetBtn">New Search</button>
+
+        <h2>Steps</h2>
+        <ol id="steps"></ol>
+      </div>
+
+      <div class="panel right">
+        <div class="mapColumn">
+          <select id="floorSelect" class="floorSelect">
+            <option value="1">1st Floor</option>
+            <option value="2">2nd Floor</option>
+            <option value="3">3rd Floor</option>
+            <option value="4">4th Floor</option>
+          </select>
+
+          <div class="mapWrap">
+            <img id="map" src="/static/floor1.png" alt="floor map">
+            <canvas id="overlay"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
