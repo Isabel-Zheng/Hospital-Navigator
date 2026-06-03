@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Capture Nodes</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 14px; background: #f6f6f6; }
+    .row { display: flex; gap: 14px; align-items: flex-start; }
+    .panel { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .left { flex: 1.4; }
+    .right { flex: 1; min-width: 360px; }
+    #mapWrap { position: relative; width: 100%; max-width: 600px; }
+    #mapImg  { width: 100%; height: auto; display: block; border-radius: 0px; }
+    #overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+    textarea { width: 100%; height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    button { padding: 10px 12px; border: none; border-radius: 8px; cursor: pointer; }
+    .small { font-size: 12px; color: #444; }
+  </style>
+</head>
+<body>
+  <h2>Node Capture</h2>
+  <p class="small">Click on the map to capture normalized coordinates (0–1). Then save the node into <b>data/locations.json</b>.</p>
+
+  <div class="row">
+    <div class="panel left">
+      <label>Floor</label>
+      <select id="floorSelect"></select>
+
+      <div id="mapWrap" style="margin-top: 10px;">
+        <img id="mapImg" alt="map">
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <p class="small">Tip: Start with hallway junction nodes (courtyard + wing entrances), then POIs (departments).</p>
+    </div>
+
+    <div class="panel right">
+      <label>id</label>
+      <input id="nodeId" placeholder="e.g., f1_jct_west">
+
+      <label>name</label>
+      <input id="nodeName" placeholder="e.g., West Junction">
+
+      <label>tags (comma-separated)</label>
+      <input id="nodeTags" placeholder="e.g., radiology, xray, imaging">
+
+      <label>last click</label>
+      <div class="small" id="xyReadout">x: —, y: —</div>
+
+      <div style="display:flex; gap:10px; margin-top: 10px;">
+        <button id="saveBtn">Save</button>
+        <button id="copyBtn">Copy JSON</button>
+      </div>
+
+      <h3 style="margin-top: 14px;">Output</h3>
+      <textarea id="out" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    const FLOORS = {{ floors | tojson }};
+
+    const floorSelect = document.getElementById("floorSelect");
+    const img = document.getElementById("mapImg");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+
+    const nodeId = document.getElementById("nodeId");
+    const nodeName = document.getElementById("nodeName");
+    const nodeTags = document.getElementById("nodeTags");
+    const xyReadout = document.getElementById("xyReadout");
+    const out = document.getElementById("out");
+
+    const saveBtn = document.getElementById("saveBtn");
+    const copyBtn = document.getElementById("copyBtn");
+
+    let lastClick = null; // {x, y} normalized
+    let nodes = [];   // existing nodes on this floor
+    let markers = []; // clicks in this session (optional)
+
+    async function fetchNodesForFloor(floorNum) {
+      const res = await fetch(`/api/nodes_by_floor?floor=${floorNum}`);
+      nodes = await res.json();
+      redraw();
+    }
+
+    function setMapForFloor(floorObj) {
+      img.src = "/static/" + floorObj.image;
+      markers = [];
+      lastClick = null;
+      xyReadout.textContent = "x: —, y: —";
+      fetchNodesForFloor(floorObj.floor);
+    }
+
+    function resizeCanvas() {
+      canvas.width = img.clientWidth;
+      canvas.height = img.clientHeight;
+      canvas.style.width = img.clientWidth + "px";
+      canvas.style.height = img.clientHeight + "px";
+      redraw();
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // draw existing saved nodes
+      nodes.forEach(n => {
+        const px = n.x * canvas.width;
+        const py = n.y * canvas.height;
+
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // optional labels (comment out if cluttered)
+        ctx.font = "12px Arial";
+        ctx.fillText(n.id, px + 8, py - 8);
+      });
+
+      // highlight last click
+      if (lastClick) {
+        const px = lastClick.x * canvas.width;
+        const py = lastClick.y * canvas.height;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    
+    // populate dropdown
+    FLOORS.forEach((f, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `Floor ${f.floor} (${f.image})`;
+      floorSelect.appendChild(opt);
+    });
+
+    floorSelect.addEventListener("change", () => {
+      setMapForFloor(FLOORS[parseInt(floorSelect.value, 10)]);
+    });
+
+    img.addEventListener("load", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+
+    document.getElementById("mapWrap").addEventListener("click", (e) => {
+      const rect = img.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+
+      lastClick = { x: +x.toFixed(6), y: +y.toFixed(6) };
+      xyReadout.textContent = `x: ${lastClick.x}, y: ${lastClick.y}`;
+      redraw();
+
+      if (!nodeName.value && nodeId.value) nodeName.value = nodeId.value;
+    });
+
+    function currentFloorNumber() {
+      return FLOORS[parseInt(floorSelect.value, 10)].floor;
+    }
+
+    function buildNodeObj() {
+      if (!lastClick) return null;
+
+      const id = nodeId.value.trim();
+      const name = (nodeName.value.trim() || id);
+      const tags = nodeTags.value
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      return { id, name, floor: currentFloorNumber(), x: lastClick.x, y: lastClick.y, tags };
+    }
+
+    function setOutput(obj) {
+      out.value = JSON.stringify(obj);
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      const node = buildNodeObj();
+      if (!node) return alert("Click on the map first.");
+      if (!node.id) return alert("Please enter an id.");
+      setOutput(node);
+
+      const res = await fetch("/api/add_location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(node)
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Failed to save.");
+
+      alert("Saved to data/locations.json ✅");
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const node = buildNodeObj();
+      if (!node) return alert("Click on the map first.");
+      if (!node.id) return alert("Please enter an id.");
+      setOutput(node);
+      await navigator.clipboard.writeText(out.value);
+      alert("Copied JSON ✅");
+    });
+
+    // init
+    floorSelect.value = "0";
+    setMapForFloor(FLOORS[0]);
+  </script>
+</body>
+</html>
