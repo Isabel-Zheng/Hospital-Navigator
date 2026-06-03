@@ -307,6 +307,10 @@ def api_add_edge():
     return jsonify({"ok": True, "added": new_edge})
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+=======
+    app.run(host="0.0.0.0", port=5000, debug=True)
+>>>>>>> ed02dbfac8947d8ad8b4b110f2fb44456a4f2918
