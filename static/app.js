@@ -214,12 +214,10 @@ floorSelect.addEventListener("change", () => {
   // choose which image to show
   let imgName = null;
 
-  // If we have floorImages from the last route, use it
   if (lastRouteData && lastRouteData.floorImages && lastRouteData.floorImages[floor]) {
     imgName = lastRouteData.floorImages[floor];
   } else {
-    // fallback: assume naming like floor1.png, floor2.png...
-    imgName = `floor${floor}.png`;
+    imgName = `Floor${floor}.png`;
   }
 
   const onLoad = () => {
