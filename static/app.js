@@ -185,7 +185,7 @@ resetBtn.addEventListener("click", () => {
   search.value = "";
   results.innerHTML = "";
   stepsEl.innerHTML = "";
-  img.src = "/static/floor1.png";
+  img.src = "/static/Floor1.png";
   drawPath([]);
 });
 
