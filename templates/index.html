@@ -11,10 +11,16 @@
 
     <div class="row">
       <div class="panel left">
-        <label>Destination</label>
+        <label>Start</label>
         <div class="searchWrap">
-          <input id="search" placeholder="Search (e.g., X-ray, Lab)" />
-          <div id="results" class="results"></div>
+          <input id="startSearch" placeholder="Search start (e.g., Front Desk, Area A)" />
+          <div id="startResults" class="results"></div>
+        </div>
+
+        <label style="margin-top:12px;">Destination</label>
+        <div class="searchWrap">
+          <input id="destSearch" placeholder="Search destination (e.g., X-ray, Lab)" />
+          <div id="destResults" class="results"></div>
         </div>
 
         <button id="routeBtn" disabled>Get Route</button>

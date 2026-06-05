@@ -1,23 +1,38 @@
 let LOCATIONS = [];
-let selectedId = null;
 
-const search = document.getElementById("search");
-const results = document.getElementById("results");
-const routeBtn = document.getElementById("routeBtn");
-const stepsEl = document.getElementById("steps");
+const startSearch  = document.getElementById("startSearch");
+const startResults = document.getElementById("startResults");
+const destSearch   = document.getElementById("destSearch");
+const destResults  = document.getElementById("destResults");
+
+const routeBtn  = document.getElementById("routeBtn");
+const returnBtn = document.getElementById("returnBtn");
+const resetBtn  = document.getElementById("resetBtn");
+const stepsEl   = document.getElementById("steps");
+
+const floorSelect = document.getElementById("floorSelect");
 
 const img = document.getElementById("map");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 
-const returnBtn = document.getElementById("returnBtn");
-const resetBtn = document.getElementById("resetBtn");
+// App state
+let startSelectedId = "front_desk";
+let destSelectedId = null;
+let currentGoal = null;       // where the last route ended
+let lastRouteData = null;     // last /api/route response
+let lastDrawnNodes = null;    // nodes drawn on the current floor
 
-let currentStart = "front_desk";
-let currentGoal = null;   // last destination we routed to
-const floorSelect = document.getElementById("floorSelect");
-let lastRouteData = null;
+// You-are-here pin
+const youAreHereImg = new Image();
+youAreHereImg.src = "/static/you_are_here_pin.svg";
+let youAreHereReady = false;
+youAreHereImg.onload = () => {
+  youAreHereReady = true;
+  if (lastDrawnNodes) drawPath(lastDrawnNodes);
+};
 
+// ---------- Canvas sizing + coordinate helpers ----------
 function resizeCanvas() {
   const wrap = document.querySelector(".mapWrap");
   const rect = wrap.getBoundingClientRect();
@@ -27,13 +42,35 @@ function resizeCanvas() {
   canvas.style.height = rect.height + "px";
 }
 
-let lastDrawnNodes = null;
 window.addEventListener("resize", () => {
   resizeCanvas();
   if (lastDrawnNodes) drawPath(lastDrawnNodes);
 });
-img.addEventListener("load", () => { resizeCanvas(); });
 
+img.addEventListener("load", () => {
+  resizeCanvas();
+  if (lastDrawnNodes) drawPath(lastDrawnNodes);
+});
+
+function getImageBox() {
+  const wrap = document.querySelector(".mapWrap");
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+
+  const nW = img.naturalWidth;
+  const nH = img.naturalHeight;
+  if (!nW || !nH) return { x: 0, y: 0, w: W, h: H };
+
+  // object-fit: contain math
+  const scale = Math.min(W / nW, H / nH);
+  const w = nW * scale;
+  const h = nH * scale;
+  const x = (W - w) / 2;
+  const y = (H - h) / 2;
+  return { x, y, w, h };
+}
+
+// ---------- Search helpers ----------
 function normalizeText(s) {
   return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -45,28 +82,44 @@ function matches(loc, q) {
   return (loc.tags || []).some(t => normalizeText(t).includes(nq));
 }
 
-function renderResults(list) {
-  results.innerHTML = "";
+function isInternalNode(loc) {
+  const id = (loc.id || "").toLowerCase();
+  return id.includes("jct") || id.includes("wing") || id.includes("core") || id.includes("courtyard");
+}
+
+function renderResultsTo(container, list, onPick) {
+  container.innerHTML = "";
   if (!list || list.length === 0) {
-    results.style.display = "none";
+    container.style.display = "none";
     return;
   }
-  results.style.display = "block";
+  container.style.display = "block";
 
   list.slice(0, 10).forEach(loc => {
     const div = document.createElement("div");
     div.className = "result";
     div.textContent = loc.name;
     div.onclick = () => {
-      selectedId = loc.id;
-      routeBtn.disabled = false;
-      [...results.children].forEach(x => x.classList.remove("selected"));
-      div.classList.add("selected");
-      results.style.display = "none";
-      search.value = loc.name;
+      container.style.display = "none";
+      onPick(loc);
     };
-    results.appendChild(div);
+    container.appendChild(div);
   });
+}
+
+// ---------- Drawing ----------
+function drawYouAreHereImage(node) {
+  if (!node || !youAreHereReady) return;
+
+  const box = getImageBox();
+  const x = box.x + node.x * box.w;
+  const y = box.y + node.y * box.h;
+
+  const w = 28;
+  const h = 28;
+
+  // pin points at bottom center
+  ctx.drawImage(youAreHereImg, x - w / 2, y - h, w, h);
 }
 
 function drawPath(pathNodes) {
@@ -86,33 +139,53 @@ function drawPath(pathNodes) {
   });
 
   ctx.stroke();
+
+  // start marker
+  drawYouAreHereImage(pathNodes[0]);
 }
 
+function drawStartMarkerIfOnCurrentFloor() {
+  const floor = parseInt(floorSelect.value, 10);
+  const startLoc = LOCATIONS.find(l => l.id === startSelectedId);
+  if (!startLoc) return;
+
+  // only draw if the start node is on the currently displayed floor
+  if (parseInt(startLoc.floor, 10) !== floor) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawYouAreHereImage(startLoc);
+}
+
+// ---------- API ----------
 async function loadLocations() {
   const res = await fetch("/api/locations");
   LOCATIONS = await res.json();
-}
 
-search.addEventListener("input", () => {
-  const q = search.value;
-  if (!q) { results.innerHTML = ""; return; }
-  const filtered = LOCATIONS.filter(l => matches(l, q));
-  renderResults(filtered);
-});
+  // default start display text
+  const fd = LOCATIONS.find(l => l.id === "front_desk");
+  if (fd) startSearch.value = fd.name;
+
+  resizeCanvas();
+  drawStartMarkerIfOnCurrentFloor();
+}
 
 async function fetchRoute(start, goal) {
   stepsEl.innerHTML = "";
 
   const res = await fetch("/api/route", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ start, goal })
   });
 
   const data = await res.json();
   if (data.error) {
     stepsEl.innerHTML = `<li>${data.error}</li>`;
-    drawPath([]);
+    lastDrawnNodes = null;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     return null;
   }
   return data;
@@ -129,107 +202,139 @@ function renderSteps(steps) {
 
 function renderRoute(data) {
   renderSteps(data.steps);
-
-  if (data.floorImage) {
-    const shownFloor = data.destFloor;
-
-    const onImgLoad = () => {
-      img.removeEventListener("load", onImgLoad);
-      resizeCanvas();
-      const floorNodes = data.pathNodes.filter(n => n.floor === shownFloor);
-      lastDrawnNodes = floorNodes;
-      drawPath(lastDrawnNodes);
-    };
-
-    img.addEventListener("load", onImgLoad);
-    img.src = "/static/" + data.floorImage;
-  } else {
-    lastDrawnNodes = data.pathNodes;
-    drawPath(lastDrawnNodes);
-  }
-
   lastRouteData = data;
-  floorSelect.value = String(data.destFloor);
+
+  const shownFloor = data.destFloor;
+  floorSelect.value = String(shownFloor);
+
+  const onImgLoad = () => {
+    img.removeEventListener("load", onImgLoad);
+    resizeCanvas();
+
+    const floorNodes = data.pathNodes.filter(n => parseInt(n.floor, 10) === shownFloor);
+    lastDrawnNodes = floorNodes;
+    drawPath(lastDrawnNodes);
+  };
+
+  img.addEventListener("load", onImgLoad);
+  img.src = "/static/" + data.floorImage;
 }
 
-routeBtn.addEventListener("click", async () => {
-  if (!selectedId) return;
+// ---------- Start/Destination search wiring ----------
+startSearch.addEventListener("input", () => {
+  const q = startSearch.value;
+  if (!q) {
+    startResults.style.display = "none";
+    startResults.innerHTML = "";
+    return;
+  }
 
-  const data = await fetchRoute("front_desk", selectedId);
+  const filtered = LOCATIONS
+    .filter(l => !isInternalNode(l))     // don’t let users pick junctions
+    .filter(l => matches(l, q));
+
+  renderResultsTo(startResults, filtered, (loc) => {
+    startSelectedId = loc.id;
+    startSearch.value = loc.name;
+
+    // If no route yet, show marker immediately (on the current floor if applicable)
+    if (!lastRouteData) {
+      drawStartMarkerIfOnCurrentFloor();
+    }
+  });
+});
+
+destSearch.addEventListener("input", () => {
+  const q = destSearch.value;
+  if (!q) {
+    destResults.style.display = "none";
+    destResults.innerHTML = "";
+    return;
+  }
+
+  const filtered = LOCATIONS.filter(l => matches(l, q));
+
+  renderResultsTo(destResults, filtered, (loc) => {
+    destSelectedId = loc.id;
+    destSearch.value = loc.name;
+    routeBtn.disabled = false;
+  });
+});
+
+// ---------- Buttons ----------
+routeBtn.addEventListener("click", async () => {
+  if (!startSelectedId || !destSelectedId) return;
+
+  const data = await fetchRoute(startSelectedId, destSelectedId);
   if (!data) return;
 
   renderRoute(data);
 
-  currentStart = "front_desk";
-  currentGoal = selectedId;
+  currentGoal = destSelectedId;
   returnBtn.disabled = false;
 });
 
 returnBtn.addEventListener("click", async () => {
   if (!currentGoal) return;
 
-  const data = await fetchRoute(currentGoal, "front_desk");
+  const data = await fetchRoute(currentGoal, startSelectedId);
   if (!data) return;
 
   renderRoute(data);
 
-  currentGoal = "front_desk";
+  currentGoal = startSelectedId;
 });
 
 resetBtn.addEventListener("click", () => {
-  selectedId = null;
+  // reset state
   currentGoal = null;
+  lastRouteData = null;
   lastDrawnNodes = null;
+
+  startSelectedId = "front_desk";
+  destSelectedId = null;
+
+  // reset UI
   routeBtn.disabled = true;
   returnBtn.disabled = true;
-  search.value = "";
-  results.innerHTML = "";
+
+  startSearch.value = "";
+  startResults.innerHTML = "";
+  startResults.style.display = "none";
+
+  destSearch.value = "";
+  destResults.innerHTML = "";
+  destResults.style.display = "none";
+
   stepsEl.innerHTML = "";
+
+  floorSelect.value = "1";
   img.src = "/static/Floor1.png";
-  drawPath([]);
+
+  resizeCanvas();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-function getImageBox() {
-  const wrap = document.querySelector(".mapWrap");
-  const W = wrap.clientWidth;
-  const H = wrap.clientHeight;
-
-  const nW = img.naturalWidth;
-  const nH = img.naturalHeight;
-  if (!nW || !nH) return { x: 0, y: 0, w: W, h: H };
-
-  const scale = Math.min(W / nW, H / nH);
-  const w = nW * scale;
-  const h = nH * scale;
-
-  const x = (W - w) / 2;
-  const y = (H - h) / 2;
-
-  return { x, y, w, h };
-}
-
+// ---------- Floor switching ----------
 floorSelect.addEventListener("change", () => {
   const floor = parseInt(floorSelect.value, 10);
 
-  // choose which image to show
-  let imgName = null;
-
-  if (lastRouteData && lastRouteData.floorImages && lastRouteData.floorImages[floor]) {
-    imgName = lastRouteData.floorImages[floor];
-  } else {
-    imgName = `Floor${floor}.png`;
-  }
+  // pick floor image: prefer server-provided mapping, else fallback to Floor{n}.png
+  const imgName =
+    (lastRouteData && lastRouteData.floorImages && lastRouteData.floorImages[floor])
+      ? lastRouteData.floorImages[floor]
+      : `Floor${floor}.png`;
 
   const onLoad = () => {
     img.removeEventListener("load", onLoad);
     resizeCanvas();
 
-    // If we have a route, draw only nodes on this floor
     if (lastRouteData) {
-      const floorNodes = lastRouteData.pathNodes.filter(n => n.floor === floor);
-      drawPath(floorNodes);
+      const floorNodes = lastRouteData.pathNodes.filter(n => parseInt(n.floor, 10) === floor);
+      lastDrawnNodes = floorNodes;
+      drawPath(lastDrawnNodes);
     } else {
-      drawPath([]);
+      drawStartMarkerIfOnCurrentFloor();
     }
   };
 

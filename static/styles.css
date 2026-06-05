@@ -1,28 +1,35 @@
+@font-face { font-family: "GoogleSansFlex"; src: url("/static/fonts/GoogleSansFlex.ttf") format("truetype"); font-weight: 400;
+  font-style: normal; font-display: swap; }
+input, button, select, textarea { font-family: "GoogleSansFlex", Arial, sans-serif; font-size: 18px; }
+label { font-size: 18px; font-weight: 700; display: block; margin-bottom: 6px; }
+input { padding: 12px 14px; border-radius: 12px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; }
+
 html, body { height: 100%; }
-body { margin: 0; font-family: Arial, sans-serif; margin: 0; background: #f6f6f6; }
+body { margin: 0; font-family: "GoogleSansFlex", Arial, sans-serif; background: #f6f6f6; }
 .container { height: 100vh; padding: 16px; box-sizing: border-box; }
 .row { height: calc(100vh - 80px); display: flex; gap: 16px; align-items: stretch; }
 
 .panel.left  { flex: 0.7; }
 .panel.right { flex: 1.3; }
 
-.mapColumn{ max-width: 400px; width: 100%; margin: 0 auto;}
-.floorSelect{ width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #ddd; background: #fff; margin-bottom: 12px; }
-#floorSelect { width: 200px; padding: 10px; border-radius: 10px; border: 1px solid #ddd; background: white; }
-.mapWrap{ position: relative; width: 100%; }
-#map{ width: 100%; height: auto; display: block; }
-#overlay{ position: absolute; left: 0; top: 0; pointer-events: none; }
+.mapColumn { max-width: 400px; width: 100%; margin: 0 auto;}
+.floorSelect { width: 200px; padding: 12px 14px; border-radius: 12px; border: 1px solid #ddd; background: #fff; margin-bottom: 12px; }
+.mapWrap { position: relative; width: 100%; }
+#map { width: 100%; height: auto; display: block; }
+#overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
 
 button { background:#111; color:#fff; margin-top: 10px; padding: 10px 12px; border: none; border-radius: 8px; cursor: pointer; }
 button:disabled { background:#ddd; color:#888; opacity: 0.5; cursor: not-allowed; }
 #resetBtn { background:#fff; color:#111; border:1px solid #ddd; }
 .searchWrap { position: relative; }
-.results { position: absolute; top: 30px; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 12px;
+
+.results { position: absolute; top: 46px; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 12px;
   overflow: hidden; max-height: 320px; overflow-y: auto; padding: 0; margin: 0; z-index: 1000; display: none; }
 .results .result { margin: 0; padding: 12px 14px; line-height: 1.2; font-size: 18px; border-bottom: 1px solid #eee;
   cursor: pointer; display: flex; align-items: center; }
-.result:last-child { border-bottom: none; }
-.result:hover { background: #f3f7ff; }
-.result.selected { background: #d9ecff; }
+.results .result:last-child { border-bottom: none; }
+.results .result:hover { background: #f3f7ff; }
+.results .result.selected { background: #d9ecff; }
+
 #steps { font-size: 18px; line-height: 1.5; }
 #steps li { margin: 10px 0; }
