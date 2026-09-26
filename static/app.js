@@ -61,7 +61,6 @@ function getImageBox() {
   const nH = img.naturalHeight;
   if (!nW || !nH) return { x: 0, y: 0, w: W, h: H };
 
-  // object-fit: contain math
   const scale = Math.min(W / nW, H / nH);
   const w = nW * scale;
   const h = nH * scale;
@@ -93,9 +92,19 @@ function renderResultsTo(container, list, onPick) {
     container.style.display = "none";
     return;
   }
+
+  const seen = new Set();
+  const deduped = [];
+  for (const loc of list) {
+    const key = `${normalizeText(loc.name)}|${loc.floor ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(loc);
+  }
+
   container.style.display = "block";
 
-  list.slice(0, 10).forEach(loc => {
+  deduped.slice(0, 10).forEach(loc => {
     const div = document.createElement("div");
     div.className = "result";
     div.textContent = loc.name;
@@ -118,7 +127,6 @@ function drawYouAreHereImage(node) {
   const w = 28;
   const h = 28;
 
-  // pin points at bottom center
   ctx.drawImage(youAreHereImg, x - w / 2, y - h, w, h);
 }
 
@@ -139,8 +147,7 @@ function drawPath(pathNodes) {
   });
 
   ctx.stroke();
-
-  // start marker
+  
   drawYouAreHereImage(pathNodes[0]);
 }
 
@@ -164,7 +171,6 @@ async function loadLocations() {
   const res = await fetch("/api/locations");
   LOCATIONS = await res.json();
 
-  // default start display text
   const fd = LOCATIONS.find(l => l.id === "front_desk");
   if (fd) startSearch.value = fd.name;
 
