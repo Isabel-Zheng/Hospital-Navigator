@@ -1,8 +1,8 @@
 [
   {"id":"front_desk","name":"Front Desk","floor":1,"x":0.500317,"y":0.678569,"tags":["information","help","check in"]},
-  {"id":"area_a","name":"Area A","floor":1,"x":0.419048,"y":0.689767,"tags":[]},
+  {"id":"area_a","name":"Area A","floor":1,"x":0.419048,"y":0.689767,"tags":["cardiology", "cardiothoracic", "general surgery", "hematology", "injection", "neurosurgery", "nursing treatment"]},
   {"id":"emergency","name":"Emergency Department","floor":1,"x":0.582857,"y":0.689767,"tags":["emergency"]},
-  {"id":"area_b","name":"Area B","floor":1,"x":0.23873,"y":0.65664,"tags":["hand"]},
+  {"id":"area_b","name":"Area B","floor":1,"x":0.23873,"y":0.65664,"tags":["hand", "colonoscopy", "endoscopy", "FLOW", "gastro-intestinal", "gastroenterology", "liver", "infusion", "neurology", "oncology", "orthopedics"]},
   {"id":"admitting_eligibility","name":"Admitting Eligibility","floor":1,"x":0.605714,"y":0.588053,"tags":["member services"]},
   {"id":"radiology","name":"X-Ray/Radiology","floor":1,"x":0.699683,"y":0.524598,"tags":["radiology","xray","imaging"]},
   {"id":"pharmacy","name":"Pharmacy","floor":1,"x":0.443175,"y":0.509667,"tags":[]},
