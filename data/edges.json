@@ -16,7 +16,6 @@
   {"from":"f1_jct_north","to":"f1_jct_northeast","distance":14,"note":"","accessible":true},
   {"from":"radiology","to":"f1_jct_northeast","distance":33,"note":"","accessible":true},
   {"from":"f1_jct_northeast","to":"nuclear_medicine","distance":40,"note":"","accessible":true},
-  {"from":"f1_jct_west","to":"f1_fct_northwest","distance":18,"note":"","accessible":true},
   {"from":"f1_fct_northwest","to":"dermatology","distance":13,"note":"","accessible":true},
   {"from":"f2_elevator","to":"dialysis","distance":15,"note":"","accessible":true},
   {"from":"dialysis","to":"f2_jct_east","distance":20,"note":"","accessible":true},
@@ -96,5 +95,7 @@
   {"from":"mb2_entrance_west","to":"mb2_entrance_east","distance":15,"note":"","accessible":true},
   {"from":"mb2_entrance_east","to":"mb3_entrance_west","distance":4,"note":"","accessible":true},
   {"from":"mb3_entrance_west","to":"mb4","distance":10,"note":"","accessible":true},
-  {"from":"b8","to":"b9","distance":24,"note":"Walk along Loop Rd","accessible":true}
+  {"from":"b8","to":"b9","distance":24,"note":"Walk along Loop Rd","accessible":true},
+  {"from":"f1_jct_west","to":"water_fountain","distance":5,"note":"","accessible":true},
+  {"from":"water_fountain","to":"f1_fct_northwest","distance":13,"note":"","accessible":true}
 ]

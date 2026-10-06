@@ -91,6 +91,7 @@
   {"id":"lot_north_corner_jct","name":"North Lot Corner Junction","floor":0,"x":0.231667,"y":0.543464,"tags":[]},
   {"id":"b520_jct_west","name":"Building 520 West Junction","floor":0,"x":0.23,"y":0.672689,"tags":[]},
   {"id":"b520_jct_east","name":"Building 520 East Junction","floor":0,"x":0.238333,"y":0.671717,"tags":[]},
-  {"id":"b101","name":"Building 101 - Administration","floor":1,"x":0.158333,"y":0.398875,"tags":[]},
-  {"id":"b102_jct","name":"Building 102 Junction","floor":0,"x":0.563333,"y":0.519174,"tags":[]}
+  {"id":"b101","name":"Building 101 - Administration/Canteen/Store","floor":1,"x":0.158333,"y":0.398875,"tags":["food","snacks","coffee","drink","shop","cafeteria"]},
+  {"id":"b102_jct","name":"Building 102 Junction","floor":0,"x":0.563333,"y":0.519174,"tags":[]},
+  {"id":"water_fountain","name":"Water Fountain","floor":1,"x":0.356667,"y":0.54646,"tags":[]}
 ]
