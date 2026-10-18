@@ -2,8 +2,14 @@ from flask import Flask, request, jsonify, render_template
 import json
 from math import inf
 from pathlib import Path
+import os
+from typing import Optional
+from pydantic import BaseModel
+from openai import OpenAI
 
 app = Flask(__name__)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 DATA_DIR = Path("data")
 LOC_PATH = DATA_DIR / "locations.json"
@@ -128,6 +134,88 @@ def dijkstra(graph, start, goal):
         path.append(prev[path[-1]])
     path.reverse()
     return path, dist[goal], prev_note
+
+class SmartSearchResult(BaseModel):
+    destination_id: Optional[str]
+    confidence: float
+    clarification_needed: bool
+    clarification_question: Optional[str]
+
+def is_searchable_location(loc):
+    loc_id = loc.get("id", "")
+    # Hide internal routing/navigation nodes
+    hidden_patterns = ["_jct", "_nurse_", "elevator"]
+    return not any(pattern in loc_id for pattern in hidden_patterns)
+
+def smart_search_location(query: str):
+    locations = load_locations_list()
+
+    searchable_locations = [
+        loc for loc in locations
+        if is_searchable_location(loc)
+    ]
+
+    location_text = "\n".join(
+        f"- id={loc['id']} | "
+        f"name={loc['name']} | "
+        f"floor={loc.get('floor')} | "
+        f"tags={', '.join(loc.get('tags', []))}"
+        for loc in searchable_locations
+    )
+
+    system_prompt = f"""
+You are the natural-language search system for a hospital navigation app.
+
+Your job is to determine which destination the user is trying to find.
+
+You MUST only select destination_id values from the provided hospital locations.
+Never invent a location.
+Never invent a destination ID.
+
+If the request is ambiguous between multiple destinations,
+set destination_id to null and clarification_needed to true,
+then ask a short clarification question.
+
+Do not diagnose medical conditions.
+Do not infer what medical treatment a patient needs.
+Only interpret requests for locations, departments, services, amenities,
+or known hospital destinations.
+
+Hospital locations:
+
+{location_text}
+"""
+
+    response = client.responses.parse(
+        model="gpt-5.6",
+        input=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": query
+            }
+        ],
+        text_format=SmartSearchResult
+    )
+
+    result = response.output_parsed
+
+    # Extra safety check:
+    valid_ids = {loc["id"] for loc in searchable_locations}
+
+    if result.destination_id is not None and result.destination_id not in valid_ids:
+        result.destination_id = None
+        result.confidence = 0
+        result.clarification_needed = True
+        result.clarification_question = (
+            "I couldn't confidently match that to a hospital destination. "
+            "Could you describe what you're looking for another way?"
+        )
+
+    return result
 
 @app.get("/")
 def home():
@@ -305,6 +393,24 @@ def api_add_edge():
         return jsonify({"error": str(ex)}), 409
 
     return jsonify({"ok": True, "added": new_edge})
+
+@app.post("/api/smart-search")
+def api_smart_search():
+    body = request.get_json(force=True)
+
+    query = str(body.get("query", "")).strip()
+
+    if not query:
+        return jsonify({"error": "Search query cannot be empty"}), 400
+
+    try:
+        result = smart_search_location(query)
+    except Exception as e:
+        print("Smart search error:", e)
+
+        return jsonify({"error": "Smart search is temporarily unavailable"}), 500
+
+    return jsonify(result.model_dump())
 
 if __name__ == "__main__":
     import os
