@@ -142,10 +142,7 @@ class SmartSearchResult(BaseModel):
     clarification_question: Optional[str]
 
 def is_searchable_location(loc):
-    loc_id = loc.get("id", "")
-    # Hide internal routing/navigation nodes
-    hidden_patterns = ["_jct", "_nurse_", "elevator"]
-    return not any(pattern in loc_id for pattern in hidden_patterns)
+    return loc.get("searchable") is True
 
 def smart_search_location(query: str):
     locations = load_locations_list()
@@ -223,9 +220,12 @@ def home():
 
 @app.get("/api/locations")
 def api_locations():
-    locations = load_locations_dict()
-    # send minimal fields for search list
-    out = [{"id": v["id"], "name": v["name"], "tags": v.get("tags", [])} for v in locations.values()]
+    locations = load_locations_list()
+    out = [
+        {"id": loc["id"], "name": loc["name"], "tags": loc.get("tags", [])}
+        for loc in locations
+        if loc.get("searchable") is True
+    ]
     return jsonify(out)
 
 @app.post("/api/route")

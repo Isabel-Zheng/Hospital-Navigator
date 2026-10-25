@@ -107,7 +107,7 @@
   {"id":"b520","name":"Building 520 - Mental Health Center","floor":0,"x":0.233333,"y":0.7339,"tags":[],"searchable": true},
   {"id":"b100_jct_west","name":"B100 West Junction","floor":0,"x":0.423333,"y":0.543464,"tags":[],"searchable": false},
   {"id":"b100_jct_east","name":"B100 East Junction","floor":0,"x":0.478333,"y":0.543464,"tags":[],"searchable": false},
-  {"id":"lot_south_jct","name":"South Lot Junction","floor":0,"x":0.541667,"y":0.545408,"tags":[],"searchable": true},
+  {"id":"lot_south_jct","name":"South Lot Junction","floor":0,"x":0.541667,"y":0.545408,"tags":[],"searchable": false},
   {"id":"walkway_jct","name":"Covered Walkway Junction","floor":0,"x":0.616667,"y":0.543464,"tags":[],"searchable": false},
   {"id":"b5_jct","name":"Building 5 Junction","floor":0,"x":0.63,"y":0.493912,"tags":[],"searchable": false},
   {"id":"lot_south_corner_jct","name":"South Lot Corner Junction","floor":0,"x":0.603333,"y":0.556095,"tags":[],"searchable": false},
